@@ -1,4 +1,6 @@
+"use client";
 
+import { Auth } from '@/components/auth';
 import { DailyCheckIn } from '@/components/daily-checkin';
 import { TodoList } from '@/components/todo-list';
 import { Journal } from '@/components/journal';
@@ -7,12 +9,15 @@ import { YogaSessions } from '@/components/yoga-sessions';
 import { GuidedMeditation } from '@/components/guided-meditation';
 import { BreathingExercises } from '@/components/breathing-exercises';
 import { MindfulnessActivities } from '@/components/mindfulness-activities';
+import { Chatbot } from '@/components/chatbot';
 
 export default function Home() {
   return (
     <div className="container mx-auto p-4">
       <h1 className="text-2xl font-semibold mb-4">Welcome to Serenity</h1>
-      
+
+      <Auth />
+
       <section className="mb-4">
         <h2 className="text-xl font-semibold mb-2">Daily Check-in</h2>
         <DailyCheckIn />
@@ -52,6 +57,12 @@ export default function Home() {
         <h2 className="text-xl font-semibold mb-2">Mindfulness Activities</h2>
         <MindfulnessActivities />
       </section>
+
+      <section className="mb-4">
+        <h2 className="text-xl font-semibold mb-2">Chatbot</h2>
+        <Chatbot />
+      </section>
     </div>
   );
 }
+
