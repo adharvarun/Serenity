@@ -1,31 +1,28 @@
 import type {Metadata} from 'next';
-import {Geist, Geist_Mono} from 'next/font/google';
+import {Inter} from 'next/font/google';
 import './globals.css';
+import {Providers} from './providers';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
-  subsets: ['latin'],
-});
-
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const inter = Inter({
   subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: 'Serenity - Your Wellbeing App',
-  description: 'Your personal wellbeing and mindfulness space.',
+  title: 'Serenity - Your Wellness Companion',
+  description: 'Track your relaxation, meditation, and wellness journey',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {children}
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.className} min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800`}>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
