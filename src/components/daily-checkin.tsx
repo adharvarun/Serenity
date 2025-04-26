@@ -1,64 +1,78 @@
-
 "use client";
 
 import { useState } from 'react';
 import { Calendar } from "@/components/ui/calendar"
 
-export const DailyCheckIn = () => {
-  const [mood, setMood] = useState('');
-  const [activities, setActivities] = useState('');
+export function DailyCheckin() {
+  const [mood, setMood] = useState(3);
+  const [energy, setEnergy] = useState(3);
+  const [stress, setStress] = useState(3);
+  const [sleep, setSleep] = useState(3);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle submission logic here (e.g., storing data in local storage or sending to a server)
-    console.log('Mood:', mood);
-    console.log('Activities:', activities);
-    alert('Daily check-in submitted!');
+    const data = {
+      mood,
+      energy,
+      stress,
+      sleep,
+      timestamp: new Date().toISOString(),
+    };
+    localStorage.setItem('dailyCheckin', JSON.stringify(data));
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="mood" className="block text-sm font-medium text-gray-700">
-          How are you feeling today?
-        </label>
-        <select
-          id="mood"
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          value={mood}
-          onChange={(e) => setMood(e.target.value)}
-        >
-          <option value="">Select mood</option>
-          <option value="happy">Happy</option>
-          <option value="sad">Sad</option>
-          <option value="stressed">Stressed</option>
-          <option value="anxious">Anxious</option>
-          <option value="calm">Calm</option>
-        </select>
-      </div>
-
-      <div>
-        <label htmlFor="activities" className="block text-sm font-medium text-gray-700">
-          What activities did you participate in today? (comma-separated)
-        </label>
+        <label>Mood</label>
         <input
-          type="text"
-          id="activities"
-          className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          value={activities}
-          onChange={(e) => setActivities(e.target.value)}
+          type="range"
+          min="1"
+          max="5"
+          value={mood}
+          onChange={(e) => setMood(Number(e.target.value))}
+          className="w-full"
         />
       </div>
       <div>
-        <Calendar/>
+        <label>Energy</label>
+        <input
+          type="range"
+          min="1"
+          max="5"
+          value={energy}
+          onChange={(e) => setEnergy(Number(e.target.value))}
+          className="w-full"
+        />
       </div>
-
+      <div>
+        <label>Stress</label>
+        <input
+          type="range"
+          min="1"
+          max="5"
+          value={stress}
+          onChange={(e) => setStress(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
+      <div>
+        <label>Sleep</label>
+        <input
+          type="range"
+          min="1"
+          max="5"
+          value={sleep}
+          onChange={(e) => setSleep(Number(e.target.value))}
+          className="w-full"
+        />
+      </div>
       <button
         type="submit"
-        className="inline-flex justify-center rounded-md border border-transparent bg-blue-100 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        className="px-4 py-2 bg-blue-500 text-white rounded"
       >
         Submit
       </button>
     </form>
   );
-};
+}

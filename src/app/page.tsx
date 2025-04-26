@@ -11,8 +11,20 @@ import { BreathingExercises } from '@/components/breathing-exercises';
 import { MindfulnessActivities } from '@/components/mindfulness-activities';
 import { Chatbot } from '@/components/chatbot';
 import { ThemeToggle } from "@/components/theme-toggle"
-import { MessageSquare, LogOut } from "lucide-react"
+import { MessageSquare, LogOut, User } from "lucide-react"
 import { useRouter } from "next/navigation";
+import { auth, app, googleProvider } from '@/firebase/firebase';
+import { signOut, signInWithPopup } from 'firebase/auth';
+import { getApps } from 'firebase/app';
+import { User as FirebaseUser, AuthError } from 'firebase/auth';
+import Link from 'next/link';
+import Image from 'next/image';
+import { WellnessLibrary } from "@/components/WellnessLibrary";
+import { saveUserData, loadUserData, shouldResetData, resetDailyData } from '@/lib/firestore-operations';
+import { PreviousJournalEntries } from '@/components/PreviousJournalEntries';
+import { SleepTracker } from '@/components/sleep-tracker';
+import { WaterTracker } from '@/components/water-tracker';
+import { PasswordlessSignIn } from '../components/passwordless-signin';
 
 const moodOptions = [
   { emoji: "😊", label: "Happy", color: "bg-green-100 dark:bg-green-900" },
@@ -23,8 +35,10 @@ const moodOptions = [
 ];
 
 interface User {
-  name: string;
-  email: string;
+  uid: string;
+  email: string | null;
+  displayName: string | null;
+  photoURL: string | null;
 }
 
 export default function Dashboard() {
@@ -34,33 +48,71 @@ export default function Dashboard() {
   const [meditationTime, setMeditationTime] = useState(0);
   const [yogaTime, setYogaTime] = useState(0);
   const [breathingTime, setBreathingTime] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [time, setTime] = useState('');
 
   useEffect(() => {
-    // Check if user is authenticated
-    const token = document.cookie.split('; ').find(row => row.startsWith('token='));
-    if (!token) {
-      setUser(null);
-      return;
-    }
+    const updateClock = () => {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      setTime(`${hours}:${minutes}`);
+    };
 
-    // In a real app, you would verify the token and get user data
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
+    updateClock();
+    const intervalId = setInterval(updateClock, 1000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
-  const handleLogin = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem('user', JSON.stringify(userData));
-  };
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user: FirebaseUser | null) => {
+      if (user) {
+        setUser({
+          uid: user.uid,
+          email: user.email,
+          displayName: user.displayName,
+          photoURL: user.photoURL
+        });
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    }, (error: Error) => {
+      console.error('Auth state change error:', error);
+      setIsLoading(false);
+    });
 
-  const handleLogout = () => {
-    document.cookie = 'token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    localStorage.removeItem('user');
-    setUser(null);
-    router.push('/');
-  };
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          // Check if we need to reset data for the new day
+          const shouldReset = await shouldResetData(user.uid);
+          if (shouldReset) {
+            await resetDailyData(user.uid);
+          } else {
+            // Load existing data
+            const userData = await loadUserData(user.uid);
+            if (userData) {
+              setSelectedMood(userData.mood);
+              setMeditationTime(userData.meditationTime);
+              setYogaTime(userData.yogaTime);
+              setBreathingTime(userData.breathingTime);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const calculateWellnessScore = () => {
     const moodScore = selectedMood ? 20 : 0;
@@ -70,33 +122,111 @@ export default function Dashboard() {
     return Math.round(moodScore + meditationScore + yogaScore + breathingScore);
   };
 
+  // Save data whenever it changes
+  useEffect(() => {
+    const saveData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          await saveUserData(user.uid, {
+            mood: selectedMood,
+            meditationTime,
+            yogaTime,
+            breathingTime,
+            wellnessScore: calculateWellnessScore()
+          });
+        }
+      } catch (error) {
+        console.error('Error saving user data:', error);
+      }
+    };
+
+    if (auth.currentUser) {
+      saveData();
+    }
+  }, [selectedMood, meditationTime, yogaTime, breathingTime, calculateWellnessScore]);
+
+  const handleLogin = (userData: { name: string; email: string }) => {
+    setUser({
+      uid: userData.email, // Using email as uid for now
+      email: userData.email,
+      displayName: userData.name,
+      photoURL: null
+    });
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      setUser(null);
+      router.push('/');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    try {
+      const result = await signInWithPopup(auth, googleProvider);
+      setUser(result.user);
+    } catch (error) {
+      console.error('Error signing in with Google:', error);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!user) {
-    return <Auth onLogin={handleLogin} />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
+        <Auth onLogin={handleLogin} />
+      </div>
+    );
   }
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Sidebar */}
-      <aside className="w-75 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-        <div className="p-6">
+      <aside className="w-[400px] fixed h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+        <div className="p-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Serenity
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-            Welcome, {user.name}
-          </p>
+          <Link href="/profile" className="flex items-center space-x-2">
+            {user.photoURL ? (
+              <Image
+                src={user.photoURL}
+                alt="Profile"
+                width={32}
+                height={32}
+                className="rounded-full"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
+                {user.displayName?.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </Link>
         </div>
         <div className="px-4">
           <Chatbot />
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-auto">
-        <header className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800">
+      <main className="flex-1 ml-[400px] h-full overflow-y-auto">
+        <header className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 p-6 bg-white dark:bg-gray-800">
           <div>
-            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">
-              Welcome back, {user.name}
+            <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              Welcome back, {user.displayName}
+              <p className="text-sm text-gray-400 border-gray-400 border-solid border px-[5px] py-[3px] rounded-full ml-1">{time}</p>
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Track your wellness journey
@@ -106,7 +236,7 @@ export default function Dashboard() {
             <ThemeToggle />
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 hover:bg-gray-100 dark:hover:bg-gray-700"
+              className="flex items-center gap-2 rounded-lg px-4 py-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-50 hover:bg-red-100 dark:hover:bg-red-900"
             >
               <LogOut className="h-4 w-4" />
               Logout
@@ -115,7 +245,6 @@ export default function Dashboard() {
         </header>
 
         <div className="p-8 space-y-8">
-          {/* Mood Section */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
             <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">How are you feeling today?</h2>
             <div className="grid grid-cols-5 gap-4">
@@ -134,7 +263,6 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Wellness Score Section */}
           <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
             <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Wellness Score Calculator</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -182,9 +310,19 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Activities Section */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Sleep Tracker</h2>
+              <SleepTracker />
+            </div>
+
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Water Intake</h2>
+              <WaterTracker />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-6">
-            {/* Yoga Sessions - Larger Section */}
             <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
               <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Yoga Sessions</h2>
               <YogaSessions />
@@ -202,10 +340,23 @@ export default function Dashboard() {
                 <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Mindfulness Activities</h2>
                 <MindfulnessActivities />
               </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Journal</h2>
+                <Journal />
+              </div>
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Todo List</h2>
+                <TodoList />
+              </div>
             </div>
           </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm">
+            <h2 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">Previous Journal Entries</h2>
+            <PreviousJournalEntries />
+          </div>
         </div>
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mt-2 mb-4">Made with ❤️ by <a href="https://github.com/adharvarun" target="_blank" rel="noopener noreferrer">Adharv Arun</a></p>
+        <p className="text-center text-sm text-gray-500 dark:text-gray-400 mb-2">Made with ❤️ by <a href="https://github.com/adharvarun" target="_blank" rel="noopener noreferrer">Adharv Arun</a></p>
       </main>
     </div>
   );

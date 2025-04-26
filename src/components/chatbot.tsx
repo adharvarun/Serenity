@@ -2,12 +2,16 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send, Loader2, AlertCircle } from "lucide-react";
-import { HfInference } from '@huggingface/inference';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
 }
+
+const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
 
 export function Chatbot() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -15,6 +19,7 @@ export function Chatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [chatHistory, setChatHistory] = useState<Message[]>([]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -23,6 +28,27 @@ export function Chatbot() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const markdownComponents = {
+    a: (props: any) => (
+      <a {...props} className="text-blue-400 hover:text-blue-300 underline break-all" target="_blank" rel="noopener noreferrer" />
+    ),
+    p: (props: any) => (
+      <p {...props} className="break-words" />
+    ),
+    code: ({ className, children, ...props }: any) => {
+      const match = /language-(\w+)/.exec(className || '');
+      const isInline = !match;
+      return (
+        <code
+          className={`${isInline ? 'bg-gray-700 rounded px-1' : 'block bg-gray-700 rounded-md p-4 my-2'} ${className || ''} break-all`}
+          {...props}
+        >
+          {children}
+        </code>
+      );
+    },
+  };
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
@@ -34,23 +60,30 @@ export function Chatbot() {
     setError(null);
 
     try {
-      const hf = new HfInference(process.env.NEXT_PUBLIC_HUGGING_FACE_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       
-      const response = await hf.textGeneration({
-        model: "mistralai/Mistral-7B-Instruct-v0.2",
-        inputs: `[INST] You are a wellness assistant. Help with wellness, meditation, and mental health. Previous conversation: ${JSON.stringify(messages)}. User: ${input} [/INST]`,
-        parameters: {
-          max_new_tokens: 1000,
+      const chat = model.startChat({
+        history: messages.map(msg => ({
+          role: msg.role === "user" ? "user" : "model",
+          parts: [{ text: msg.content }],
+        })),
+        generationConfig: {
+          maxOutputTokens: 1000,
           temperature: 0.7,
-          top_p: 0.8,
-          top_k: 40,
-          return_full_text: false
-        }
+          topP: 0.8,
+          topK: 40,
+        },
       });
+
+      const result = await chat.sendMessage(
+        `You are a wellness assistant. Help with wellness, meditation, and mental health. User message: ${input}`
+      );
+      const response = await result.response;
+      const text = response.text();
 
       const assistantMessage: Message = {
         role: "assistant",
-        content: response.generated_text
+        content: text || "Sorry, I couldn't generate a response."
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -69,7 +102,7 @@ export function Chatbot() {
   };
 
   return (
-    <div className="flex flex-col h-[500px] bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col h-[600px] bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
           AI Wellness Assistant
@@ -102,13 +135,22 @@ export function Chatbot() {
               }`}
             >
               <div
-                className={`max-w-[80%] rounded-lg p-3 ${
+                className={`max-w-[90%] rounded-lg p-3 ${
                   message.role === "user"
                     ? "bg-blue-500 text-white"
                     : "bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                }`}
+                } break-words whitespace-pre-wrap`}
               >
-                {message.content}
+                {message.role === "assistant" ? (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={markdownComponents}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                ) : (
+                  <p>{message.content}</p>
+                )}
               </div>
             </div>
           ))

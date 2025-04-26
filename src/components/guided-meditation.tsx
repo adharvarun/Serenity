@@ -4,46 +4,15 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-
-const meditations = [
-  {
-    id: '1',
-    title: 'Mindful Breathing',
-    duration: '5 minutes',
-    audioUrl: '/audio/mindful-breathing.mp3', // Replace with actual URLs
-  },
-  {
-    id: '2',
-    title: 'Body Scan Meditation',
-    duration: '10 minutes',
-    audioUrl: '/audio/body-scan.mp3',
-  },
-  // Add more meditation options
-];
+import { guidedMeditations } from '@/data/wellness';
 
 export const GuidedMeditation = () => {
-  const [selectedMeditation, setSelectedMeditation] = useState(meditations[0].id);
+  const [selectedMeditation, setSelectedMeditation] = useState<string>(guidedMeditations[0].id.toString());
   const [isPlaying, setIsPlaying] = useState(false);
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
 
   const handleMeditationChange = (value: string) => {
     setSelectedMeditation(value);
-  };
-
-  const handlePlayPause = () => {
-    if (!audio) {
-      const newAudio = new Audio(meditations.find(m => m.id === selectedMeditation)?.audioUrl);
-      setAudio(newAudio);
-      newAudio.play();
-      setIsPlaying(true);
-    } else {
-      if (isPlaying) {
-        audio.pause();
-      } else {
-        audio.play();
-      }
-      setIsPlaying(!isPlaying);
-    }
   };
 
   return (
@@ -60,16 +29,23 @@ export const GuidedMeditation = () => {
               <SelectValue placeholder="Select a meditation" />
             </SelectTrigger>
             <SelectContent>
-              {meditations.map((meditation) => (
-                <SelectItem key={meditation.id} value={meditation.id}>
+              {guidedMeditations.map((meditation) => (
+                <SelectItem key={meditation.id} value={meditation.id.toString()}>
                   {meditation.title} ({meditation.duration})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handlePlayPause}>
-          {isPlaying ? 'Pause' : 'Play'}
+        <Button
+          onClick={() => {
+            const meditation = guidedMeditations.find(m => m.id.toString() === selectedMeditation);
+            if (meditation) {
+              window.location.href = meditation.audioUrl;
+            }
+          }}
+        >
+          Start Meditation
         </Button>
       </CardContent>
     </Card>
