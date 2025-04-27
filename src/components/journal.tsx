@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { db } from '@/firebase/firebase';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuth } from '@/hooks/use-auth';
+import { Timestamp } from 'firebase/firestore';
 
 export function Journal() {
   const [entries, setEntries] = useState<string[]>([]);
@@ -27,12 +28,27 @@ export function Journal() {
   const addEntry = async () => {
     if (!newEntry.trim() || !user) return;
 
-    const updatedEntries = [newEntry, ...entries];
-    setEntries(updatedEntries);
+    // Save as object with content and timestamp
+    const newJournalEntry = {
+      content: newEntry,
+      timestamp: new Date(), // We'll convert to Firestore Timestamp on save
+    };
+
+    // Fetch existing entries (as objects)
+    const userDoc = await getDoc(doc(db, 'users', user.uid));
+    let existingEntries = [];
+    if (userDoc.exists()) {
+      existingEntries = userDoc.data().journalEntries || [];
+    }
+    const updatedEntries = [newJournalEntry, ...existingEntries];
     setNewEntry('');
 
+    // Save to Firestore, converting timestamp to Firestore Timestamp
     await updateDoc(doc(db, 'users', user.uid), {
-      journalEntries: updatedEntries,
+      journalEntries: updatedEntries.map(entry => ({
+        content: entry.content,
+        timestamp: typeof entry.timestamp?.toDate === 'function' ? entry.timestamp : Timestamp.fromDate(new Date(entry.timestamp)),
+      })),
     });
   };
 
@@ -50,13 +66,6 @@ export function Journal() {
       >
         Add Entry
       </Button>
-      <div className="space-y-2">
-        {entries.map((entry, index) => (
-          <div key={index} className="p-2 border rounded">
-            {entry}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
