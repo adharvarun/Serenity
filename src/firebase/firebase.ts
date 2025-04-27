@@ -1,6 +1,5 @@
-// Import the functions you need from the SDKs you need
 import { initializeApp, getApps } from "firebase/app";
-import { getAuth, GoogleAuthProvider, EmailAuthProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
+import { getAuth, EmailAuthProvider, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
@@ -13,7 +12,6 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Validate required fields
 const requiredFields = ['apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'];
 const missingFields = requiredFields.filter(field => !firebaseConfig[field as keyof typeof firebaseConfig]);
 
@@ -22,7 +20,6 @@ if (missingFields.length > 0) {
   throw new Error(`Missing required Firebase configuration fields: ${missingFields.join(', ')}`);
 }
 
-// Initialize Firebase
 let app;
 if (!getApps().length) {
   app = initializeApp(firebaseConfig);
@@ -33,11 +30,8 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-// Initialize providers
-const googleProvider = new GoogleAuthProvider();
 const emailProvider = new EmailAuthProvider();
 
-// Email link authentication action code settings
 const actionCodeSettings = {
   url: `${typeof window !== 'undefined' ? window.location.origin : ''}/auth/callback`,
   handleCodeInApp: true,
@@ -48,7 +42,6 @@ export {
   auth, 
   db, 
   storage, 
-  googleProvider, 
   emailProvider, 
   actionCodeSettings, 
   sendSignInLinkToEmail, 
