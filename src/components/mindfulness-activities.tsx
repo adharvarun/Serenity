@@ -48,7 +48,14 @@ export const MindfulnessActivities = () => {
           </div>
         ))}
         {selectedActivities.length > 0 && (
-          <p>Selected activities: {selectedActivities.map(id => activities.find(a => a.id === id)?.name).join(', ')}</p>
+          <ul>
+            <p>Selected Activities:</p>
+            {selectedActivities.map((id) => (
+              <li key={id} className="text-sm relative pl-4 before:content-['-'] before:absolute before:left-0">
+                {activities.find((activity) => activity.id === id)?.name}
+              </li>
+            ))}
+          </ul>
         )}
       </CardContent>
     </Card>
