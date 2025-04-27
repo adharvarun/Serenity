@@ -4,27 +4,23 @@ import { useState, useEffect } from "react";
 import { Auth } from '@/components/auth';
 import { TodoList } from '@/components/todo-list';
 import { Journal } from '@/components/journal';
-import { AiWellbeingScore } from '@/components/ai-wellbeing-score';
 import { YogaSessions } from '@/components/yoga-sessions';
 import { GuidedMeditation } from '@/components/guided-meditation';
 import { BreathingExercises } from '@/components/breathing-exercises';
 import { MindfulnessActivities } from '@/components/mindfulness-activities';
 import { Chatbot } from '@/components/chatbot';
 import { ThemeToggle } from "@/components/theme-toggle"
-import { MessageSquare, LogOut, User } from "lucide-react"
+import { LogOut, User } from "lucide-react"
 import { useRouter } from "next/navigation";
-import { auth, app, googleProvider } from '@/firebase/firebase';
-import { signOut, signInWithPopup } from 'firebase/auth';
-import { getApps } from 'firebase/app';
-import { User as FirebaseUser, AuthError } from 'firebase/auth';
+import { auth } from '@/firebase/firebase';
+import { signOut } from 'firebase/auth';
+import { User as FirebaseUser } from 'firebase/auth';
 import Link from 'next/link';
 import Image from 'next/image';
-import { WellnessLibrary } from "@/components/WellnessLibrary";
 import { saveUserData, loadUserData, shouldResetData, resetDailyData } from '@/lib/firestore-operations';
 import { PreviousJournalEntries } from '@/components/PreviousJournalEntries';
 import { SleepTracker } from '@/components/sleep-tracker';
 import { WaterTracker } from '@/components/water-tracker';
-import { PasswordlessSignIn } from '../components/passwordless-signin';
 
 const moodOptions = [
   { emoji: "😊", label: "Happy", color: "bg-green-100 dark:bg-green-900" },
@@ -148,7 +144,7 @@ export default function Dashboard() {
 
   const handleLogin = (userData: { name: string; email: string }) => {
     setUser({
-      uid: userData.email, // Using email as uid for now
+      uid: userData.email,
       email: userData.email,
       displayName: userData.name,
       photoURL: null
@@ -162,15 +158,6 @@ export default function Dashboard() {
       router.push('/');
     } catch (error) {
       console.error('Error signing out:', error);
-    }
-  };
-
-  const handleGoogleSignIn = async () => {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      setUser(result.user);
-    } catch (error) {
-      console.error('Error signing in with Google:', error);
     }
   };
 

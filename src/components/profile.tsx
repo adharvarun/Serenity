@@ -4,12 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { auth, db, storage } from '@/firebase/firebase';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { updateProfile, sendPasswordResetEmail } from 'firebase/auth';
-import { LogOut, Image as ImageIcon, ArrowLeft } from "lucide-react";
+import { auth } from '@/firebase/firebase';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { LogOut, ArrowLeft } from "lucide-react";
 import Image from 'next/image';
 
 interface UserProfile {
