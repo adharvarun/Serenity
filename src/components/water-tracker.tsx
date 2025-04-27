@@ -21,7 +21,7 @@ export function WaterTracker() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const todayData = data.waterIntake?.find(
-              (entry: any) => entry.date.toDate().toDateString() === today.toDateString()
+              (entry: any) => entry.date?.toDate?.()?.toDateString() === today.toDateString()
             );
             if (todayData) {
               setAmount(todayData.amount);
@@ -57,7 +57,7 @@ export function WaterTracker() {
             amount: newAmount
           },
           ...(existingData.waterIntake || []).filter(
-            (entry: any) => entry.date.toDate().toDateString() !== today.toDateString()
+            (entry: any) => entry.date?.toDate?.()?.toDateString() !== today.toDateString()
           )
         ];
 

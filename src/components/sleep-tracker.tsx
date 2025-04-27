@@ -22,7 +22,7 @@ export function SleepTracker() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const todayData = data.sleepData?.find(
-              (entry: any) => entry.date.toDate().toDateString() === today.toDateString()
+              (entry: any) => entry.date?.toDate?.()?.toDateString() === today.toDateString()
             );
             if (todayData) {
               setHours(todayData.hours);
@@ -57,7 +57,7 @@ export function SleepTracker() {
             quality
           },
           ...(existingData.sleepData || []).filter(
-            (entry: any) => entry.date.toDate().toDateString() !== today.toDateString()
+            (entry: any) => entry.date?.toDate?.()?.toDateString() !== today.toDateString()
           )
         ];
 
