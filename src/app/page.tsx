@@ -21,7 +21,6 @@ import { saveUserData, loadUserData, shouldResetData, resetDailyData } from '@/l
 import { PreviousJournalEntries } from '@/components/PreviousJournalEntries';
 import { SleepTracker } from '@/components/sleep-tracker';
 import { WaterTracker } from '@/components/water-tracker';
-import { SpeedInsights } from "@vercel/speed-insights/next"
 
 const moodOptions = [
   { emoji: "😊", label: "Happy", color: "bg-green-100 dark:bg-green-900" },
@@ -88,12 +87,10 @@ export default function Dashboard() {
       try {
         const user = auth.currentUser;
         if (user) {
-          // Check if we need to reset data for the new day
           const shouldReset = await shouldResetData(user.uid);
           if (shouldReset) {
             await resetDailyData(user.uid);
           } else {
-            // Load existing data
             const userData = await loadUserData(user.uid);
             if (userData) {
               setSelectedMood(userData.mood);
@@ -182,7 +179,6 @@ export default function Dashboard() {
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-900">
-      <SpeedInsights />
       <aside className="w-[400px] fixed h-full bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
         <div className="p-6 flex items-center justify-between">
           <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
